@@ -1,5 +1,6 @@
 ﻿using OrderService.Activities;
 using Shared.Contracts;
+using Temporalio.Exceptions;
 using Temporalio.Workflows;
 
 namespace OrderService.Workflows;
@@ -47,11 +48,7 @@ public class OrderProcessWorkflow
                 });
 
             if (!payment.Success)
-            {
-                _logger.LogWarning("Payment failed for order {OrderId}: {Reason}",
-                    order.OrderId, payment.FailureReason);
-                return OrderStatus.Failed;
-            }
+                throw new ApplicationFailureException($"Payment failed for order {order.OrderId}: {payment.FailureReason}");
 
             // Rolling back 2: refund payment
             compensations.Push(async () => await Workflow.ExecuteActivityAsync(
@@ -74,13 +71,7 @@ public class OrderProcessWorkflow
                 });
             
             if (!inventory.Success)
-            {
-                _logger.LogWarning("Inventory reservation failed for order {OrderId}: {Reason}",
-                    order.OrderId, inventory.FailureReason);
-                // Run compensations (refund payment)
-                await RunCompensationsAsync(compensations);
-                return OrderStatus.Failed;
-            }
+                throw new ApplicationFailureException($"Inventory reservation failed for order {order.OrderId}: {inventory.FailureReason}");
             
             // Rolling back 3: restock inventory
             compensations.Push(async () => await Workflow.ExecuteActivityAsync(
@@ -106,13 +97,7 @@ public class OrderProcessWorkflow
                 });
             
             if (!delivery.Success)
-            {
-                _logger.LogWarning("Delivery scheduling failed for order {OrderId}: {Reason}",
-                    order.OrderId, delivery.FailureReason);
-                // Run compensations (release inventory, refund payment)
-                await RunCompensationsAsync(compensations);
-                return OrderStatus.Failed;
-            }
+                throw new ApplicationFailureException($"Delivery product failed for order {order.OrderId}: {delivery.FailureReason}");
 
             // Mark order as completed (Order service)
             await Workflow.ExecuteActivityAsync(
@@ -128,7 +113,7 @@ public class OrderProcessWorkflow
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected failure for order {OrderId}, compensating", order.OrderId);
+            _logger.LogError(ex, "Failure for order {OrderId}, compensating", order.OrderId);
             await RunCompensationsAsync(compensations);
             throw; // Workflow will fail, but side effects have been compensated
         }
