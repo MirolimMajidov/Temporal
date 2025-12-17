@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.OpenApi;
 using OrderService.Activities;
 using OrderService.Contracts;
 using OrderService.Repositories;
@@ -9,7 +10,11 @@ using Temporalio.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddOpenApi();
+// Required for Minimal APIs
+builder.Services.AddEndpointsApiExplorer(); 
+// Add the built-in OpenAPI service
+builder.Services.AddOpenApi(); 
+
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 
 // 1. Register Temporal client as ITemporalClient
@@ -25,13 +30,23 @@ builder.Services.AddHostedTemporalWorker(
         clientNamespace: "default",
         taskQueue: TaskQueues.OrderOrchestration)
     .AddScopedActivities<OrderActivities>()
-    .AddWorkflow<ProcessOrderWorkflow>();
+    .AddWorkflow<OrderProcessWorkflow>();
+
 
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    // Map the OpenAPI document endpoint (e.g., /openapi/v1.json)
+    app.MapOpenApi(); 
+    
+    // Enable the Swagger UI middleware, only in development for security best practices
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "Order API V1");
+        options.RoutePrefix = "swagger"; // Access UI at /swagger
+        options.EnableTryItOutByDefault();
+    });
 }
 
 app.MapGet("/test", () => Results.Ok("Test endpoint is working!"));
@@ -45,14 +60,15 @@ app.MapPost("/create-order", async (CreateOrderDto dto, [FromServices] ITemporal
         Quantity: dto.Quantity,
         Amount: dto.Amount,
         Currency: dto.Currency,
-        ShippingAddress: dto.ShippingAddress);
+        ShippingAddress: dto.ShippingAddress,
+        ShouldFailDelivery: dto.ShouldFailDelivery);
 
     var options = new WorkflowOptions(
         id: $"order-{order.OrderId}",
         taskQueue: TaskQueues.OrderOrchestration);
 
     await client.ExecuteWorkflowAsync(
-        (ProcessOrderWorkflow wf) =>
+        (OrderProcessWorkflow wf) =>
             wf.RunAsync(order),
         options);
 

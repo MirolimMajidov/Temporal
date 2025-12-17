@@ -4,6 +4,7 @@ using Shared.Contracts;
 using Temporalio.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddServiceDefaults();
 
 builder.Services.AddOpenApi();
 builder.Services.AddScoped<IDeliveryService, DeliveryService.Services.DeliveryService>();

@@ -6,4 +6,5 @@ public record CreateOrderDto(
     int Quantity,
     decimal Amount,
     string Currency,
-    string ShippingAddress);
+    string ShippingAddress,
+    bool ShouldFailDelivery = false);

@@ -5,7 +5,7 @@ using Temporalio.Workflows;
 namespace OrderService.Workflows;
 
 [Workflow]
-public class ProcessOrderWorkflow
+public class OrderProcessWorkflow
 {
     private readonly ILogger _logger = Workflow.Logger;
 
@@ -29,9 +29,17 @@ public class ProcessOrderWorkflow
                 }));
             
             // 1. Charge payment (Payment service)
-            payment = await Workflow.ExecuteActivityAsync(
-                (IPaymentActivities act) => act.PayAsync(
-                    new PaymentRequest(order.OrderId, order.CustomerId, order.Amount, order.Currency)),
+            var paymentRequest = new PaymentRequest(order.OrderId, order.CustomerId, order.Amount, order.Currency);
+            // payment = await Workflow.ExecuteActivityAsync(
+            //     (IPaymentActivities act) => act.PayAsync(paymentRequest),
+            //     new()
+            //     {
+            //         TaskQueue = TaskQueues.Payment,
+            //         StartToCloseTimeout = TimeSpan.FromMinutes(2)
+            //     });
+            payment = await Workflow.ExecuteActivityAsync<PaymentResult>(
+                activity: "Pay",
+                args: [paymentRequest],
                 new()
                 {
                     TaskQueue = TaskQueues.Payment,
@@ -89,7 +97,8 @@ public class ProcessOrderWorkflow
                 (IDeliveryActivities act) => act.DeliveryAsync(
                     new DeliveryRequest(order.OrderId,
                                         inventory.ReservationId,
-                                        order.ShippingAddress)),
+                                        order.ShippingAddress,
+                                        order.ShouldFailDelivery)),
                 new()
                 {
                     TaskQueue = TaskQueues.Delivery,

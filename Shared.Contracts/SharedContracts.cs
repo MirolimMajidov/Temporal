@@ -20,7 +20,8 @@ public record OrderDetails(
     int Quantity,
     decimal Amount,
     string Currency,
-    string ShippingAddress);
+    string ShippingAddress,
+    bool ShouldFailDelivery = false);
 
 public record PaymentRequest(
     Guid OrderId,
@@ -46,7 +47,8 @@ public record InventoryReserveResult(
 public record DeliveryRequest(
     Guid OrderId,
     Guid ReservationId,
-    string ShippingAddress);
+    string ShippingAddress,
+    bool ShouldFailDelivery);
 
 public record DeliveryResult(
     Guid DeliveryId,
