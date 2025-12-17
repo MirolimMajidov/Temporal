@@ -2,14 +2,16 @@
 
 public class OrderRepository : IOrderRepository
 {
-    public Task<bool> MarkCompletedAsync(Guid orderId)
+    public async Task<bool> MarkCompletedAsync(Guid orderId)
     {
-        return Task.FromResult(true);
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        return await Task.FromResult(true);
     }
 
-    public Task<bool> MarkFailedAsync(Guid orderId)
+    public async Task<bool> MarkFailedAsync(Guid orderId)
     {
-        return Task.FromResult(true);
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        return await Task.FromResult(true);
     }
 }
 

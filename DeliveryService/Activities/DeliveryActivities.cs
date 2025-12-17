@@ -7,9 +7,9 @@ namespace DeliveryService.Activities;
 public class DeliveryActivities(IDeliveryService service)
 {
     [Activity]
-    public async Task<DeliveryResult> ScheduleDeliveryAsync(DeliveryRequest  request)
+    public async Task<DeliveryResult> DeliveryAsync(DeliveryRequest  request)
     {
-        var deliveryId = await service.DeliverAsync(request);
+        var deliveryId = await service.DeliveryAsync(request);
         return new DeliveryResult(deliveryId, Success: true);
     }
 }

@@ -24,5 +24,5 @@ public interface IInventoryActivities
 public interface IDeliveryActivities
 {
     [Activity]
-    public Task<DeliveryResult> ScheduleDeliveryAsync(DeliveryRequest request);
+    public Task<DeliveryResult> DeliveryAsync(DeliveryRequest request);
 }

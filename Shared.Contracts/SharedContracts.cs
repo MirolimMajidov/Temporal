@@ -1,5 +1,8 @@
-﻿namespace Shared.Contracts;
+﻿using System.Text.Json.Serialization;
 
+namespace Shared.Contracts;
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum OrderStatus
 {
     Pending,

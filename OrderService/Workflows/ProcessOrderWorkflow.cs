@@ -12,15 +12,15 @@ public class ProcessOrderWorkflow
     [WorkflowRun]
     public async Task<OrderStatus> RunAsync(OrderDetails order)
     {
-        var compensations = new List<Func<Task>>();
-        PaymentResult? payment = null;
-        InventoryReserveResult? inventory = null;
-        DeliveryResult? delivery = null;
+        var compensations = new Stack<Func<Task>>();
+        PaymentResult payment;
+        InventoryReserveResult inventory;
+        DeliveryResult delivery;
 
         try
         {
-            // Compensation 1: Mark order failed
-            compensations.Add(() => Workflow.ExecuteActivityAsync(
+            // Rolling back 1: Mark order failed (Order service)
+            compensations.Push(async () => await Workflow.ExecuteActivityAsync(
                 (OrderActivities act) => act.MarkOrderFailedAsync(order.OrderId),
                 new()
                 {
@@ -45,8 +45,8 @@ public class ProcessOrderWorkflow
                 return OrderStatus.Failed;
             }
 
-            // Compensation 2: refund payment
-            compensations.Add(() => Workflow.ExecuteActivityAsync(
+            // Rolling back 2: refund payment
+            compensations.Push(async () => await Workflow.ExecuteActivityAsync(
                 (IPaymentActivities act) => act.RefundPaymentAsync(payment.PaymentId),
                 new()
                 {
@@ -74,8 +74,8 @@ public class ProcessOrderWorkflow
                 return OrderStatus.Failed;
             }
             
-            // Compensation 3: restock inventory
-            compensations.Add(() => Workflow.ExecuteActivityAsync(
+            // Rolling back 3: restock inventory
+            compensations.Push(async () => await Workflow.ExecuteActivityAsync(
                 (IInventoryActivities act) =>
                     act.RestockInventoryAsync(inventory!.ReservationId),
                 new()
@@ -84,16 +84,16 @@ public class ProcessOrderWorkflow
                     StartToCloseTimeout = TimeSpan.FromMinutes(2)
                 }));
             
-            // 3. Arrange delivery (Delivery service)
+            // 3. Delivery product (Delivery service)
             delivery = await Workflow.ExecuteActivityAsync(
-                (IDeliveryActivities act) => act.ScheduleDeliveryAsync(
+                (IDeliveryActivities act) => act.DeliveryAsync(
                     new DeliveryRequest(order.OrderId,
                                         inventory.ReservationId,
                                         order.ShippingAddress)),
                 new()
                 {
                     TaskQueue = TaskQueues.Delivery,
-                    StartToCloseTimeout = TimeSpan.FromMinutes(5)
+                    StartToCloseTimeout = TimeSpan.FromMinutes(2)
                 });
             
             if (!delivery.Success)
@@ -105,10 +105,10 @@ public class ProcessOrderWorkflow
                 return OrderStatus.Failed;
             }
 
-            // Success – mark order completed in Order service
+            // Mark order as completed (Order service)
             await Workflow.ExecuteActivityAsync(
                 (OrderActivities act) =>
-                    act.MarkOrderCompletedAsync(order.OrderId),
+                    act.MarkAsCompletedAsync(order.OrderId),
                 new()
                 {
                     TaskQueue = TaskQueues.OrderOrchestration,
@@ -125,12 +125,15 @@ public class ProcessOrderWorkflow
         }
     }
 
-    private async Task RunCompensationsAsync(List<Func<Task>> compensations)
+    /// <summary>
+    /// For rolling back actions in reverse order.
+    /// </summary>
+    /// <param name="compensations">Rolling back actions to run.</param>
+    private async Task RunCompensationsAsync(Stack<Func<Task>> compensations)
     {
-        // Run in reverse order like a classic Saga
-        compensations.Reverse();
-        foreach (var comp in compensations)
+        while (compensations.Count > 0)
         {
+            var comp = compensations.Pop();
             try
             {
                 await comp();

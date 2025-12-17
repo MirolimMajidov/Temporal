@@ -4,15 +4,17 @@ namespace PaymentService.Services;
 
 public class PaymentService : IPaymentService
 {
-    public Task<Guid> PayAsync(PaymentRequest request)
+    public async Task<Guid> PayAsync(PaymentRequest request)
     {
+        await Task.Delay(TimeSpan.FromSeconds(2));
         var paymentId = Guid.NewGuid();
-        return Task.FromResult(paymentId);
+        return await Task.FromResult(paymentId);
     }
 
-    public Task<bool> RefundAsync(Guid paymentId)
+    public async Task<bool> RefundAsync(Guid paymentId)
     {
-        return Task.FromResult(true);
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        return await Task.FromResult(true);
     }
 }
 

@@ -2,15 +2,17 @@
 
 public class InventoryRepository : IInventoryRepository
 {
-    public Task<Guid> ReserveInventoryAsync(Guid itemId, int quantity, Guid orderId)
+    public async Task<Guid> ReserveInventoryAsync(Guid itemId, int quantity, Guid orderId)
     {
+        await Task.Delay(TimeSpan.FromSeconds(2));
         var reservationId = Guid.NewGuid();
-        return Task.FromResult(reservationId);
+        return await Task.FromResult(reservationId);
     }
 
-    public Task<bool> RestockInventoryAsync(Guid reservationId)
+    public async Task<bool> RestockInventoryAsync(Guid reservationId)
     {
-        return Task.FromResult(true);
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        return await Task.FromResult(true);
     }
 }
 
