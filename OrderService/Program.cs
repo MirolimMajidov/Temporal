@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.OpenApi;
 using OrderService.Activities;
 using OrderService.Contracts;
 using OrderService.Repositories;
@@ -7,14 +6,15 @@ using OrderService.Workflows;
 using Shared.Contracts;
 using Temporalio.Client;
 using Temporalio.Extensions.Hosting;
+using Temporalio.Extensions.OpenTelemetry;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
 // Required for Minimal APIs
-builder.Services.AddEndpointsApiExplorer(); 
+builder.Services.AddEndpointsApiExplorer();
 // Add the built-in OpenAPI service
-builder.Services.AddOpenApi(); 
+builder.Services.AddOpenApi();
 
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 
@@ -23,24 +23,23 @@ builder.Services.AddTemporalClient(options =>
 {
     options.TargetHost = "localhost:7233";
     options.Namespace = "default";
+
+    // Add tracing interceptor
+    options.Interceptors = [new TracingInterceptor()];
 });
 
 // 2. Optionally run a worker in this service for order-related work
-builder.Services.AddHostedTemporalWorker(
-        clientTargetHost: "localhost:7233",
-        clientNamespace: "default",
-        taskQueue: TaskQueues.OrderOrchestration)
+builder.Services.AddHostedTemporalWorker(TaskQueues.OrderOrchestration)
     .AddScopedActivities<OrderActivities>()
     .AddWorkflow<OrderProcessWorkflow>();
-
 
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
     // Map the OpenAPI document endpoint (e.g., /openapi/v1.json)
-    app.MapOpenApi(); 
-    
+    app.MapOpenApi();
+
     // Enable the Swagger UI middleware, only in development for security best practices
     app.UseSwaggerUI(options =>
     {
@@ -70,7 +69,7 @@ app.MapPost("/create-order", async (CreateOrderDto dto, [FromServices] ITemporal
 
     await client.StartWorkflowAsync((OrderProcessWorkflow wf) => wf.RunAsync(order), options);
 
-    return  Results.Created(string.Empty, value: new { orderId = orderId });
+    return Results.Created(string.Empty, value: new { orderId = orderId });
 });
 
 app.Run();
