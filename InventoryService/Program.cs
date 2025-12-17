@@ -1,6 +1,19 @@
-﻿var builder = WebApplication.CreateBuilder(args);
+﻿using InventoryService.Activities;
+using InventoryService.Repositories;
+using Shared.Contracts;
+using Temporalio.Extensions.Hosting;
+
+var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
+
+builder.Services
+    .AddHostedTemporalWorker(
+        clientTargetHost: "localhost:7233",
+        clientNamespace: "default",
+        taskQueue: TaskQueues.Inventory)
+    .AddScopedActivities<InventoryActivities>();
 
 var app = builder.Build();
 
