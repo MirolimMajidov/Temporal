@@ -67,6 +67,7 @@ app.MapPost("/create-order", async (CreateOrderDto dto, [FromServices] ITemporal
         id: $"order-{order.OrderId}",
         taskQueue: TaskQueues.OrderOrchestration);
 
+    //await client.ExecuteWorkflowAsync((OrderProcessWorkflow wf) => wf.RunAsync(order), options);
     await client.StartWorkflowAsync((OrderProcessWorkflow wf) => wf.RunAsync(order), options);
 
     return Results.Created(string.Empty, value: new { orderId = orderId });
