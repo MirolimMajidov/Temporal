@@ -134,7 +134,7 @@ public class OrderProcessWorkflow
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Compensation failed");
+                _logger.LogError(ex, "Compensation failed");
                 // Usually log for manual intervention
             }
         }
