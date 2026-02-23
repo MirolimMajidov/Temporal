@@ -10,8 +10,9 @@ builder.AddServiceDefaults();
 builder.Services.AddOpenApi();
 builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
 
+var temporalOptions = new TemporalOptions();
 builder.Services
-    .AddHostedTemporalWorker(clientTargetHost: "localhost:7233", clientNamespace: "default",
+    .AddHostedTemporalWorker(clientTargetHost: temporalOptions.Host, clientNamespace: temporalOptions.Namespace,
         taskQueue: TaskQueues.Inventory)
     .ConfigureOptions(opts => { opts.Interceptors = [new TracingInterceptor()]; })
     .AddScopedActivities<InventoryActivities>();

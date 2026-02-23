@@ -10,10 +10,11 @@ builder.AddServiceDefaults();
 builder.Services.AddOpenApi();
 builder.Services.AddScoped<IDeliveryService, DeliveryService.Services.DeliveryService>();
 
+var temporalOptions = new TemporalOptions();
 builder.Services
     .AddHostedTemporalWorker(
-        clientTargetHost: "localhost:7233",
-        clientNamespace: "default",
+        clientTargetHost: temporalOptions.Host,
+        clientNamespace: temporalOptions.Namespace,
         taskQueue: TaskQueues.Delivery)
     .ConfigureOptions(opts => { opts.Interceptors = [new TracingInterceptor()]; })
     .AddScopedActivities<DeliveryActivities>();

@@ -18,11 +18,12 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 
+var temporalOptions = new TemporalOptions();
 // 1. Register Temporal client as ITemporalClient
 builder.Services.AddTemporalClient(options =>
 {
-    options.TargetHost = "localhost:7233";
-    options.Namespace = "default";
+    options.TargetHost = temporalOptions.Host;
+    options.Namespace = temporalOptions.Namespace;
 
     // Add tracing interceptor
     options.Interceptors = [new TracingInterceptor()];

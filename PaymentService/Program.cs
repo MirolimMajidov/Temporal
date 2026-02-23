@@ -10,10 +10,11 @@ builder.AddServiceDefaults();
 builder.Services.AddOpenApi();
 builder.Services.AddScoped<IPaymentService, PaymentService.Services.PaymentService>();
 
+var temporalOptions = new TemporalOptions();
 builder.Services
     .AddHostedTemporalWorker(
-        clientTargetHost: "localhost:7233",
-        clientNamespace: "default",
+        clientTargetHost: temporalOptions.Host,
+        clientNamespace: temporalOptions.Namespace,
         taskQueue: TaskQueues.Payment)
     .ConfigureOptions(opts => { opts.Interceptors = [new TracingInterceptor()]; })
     .AddScopedActivities<PaymentActivities>();
