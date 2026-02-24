@@ -24,7 +24,8 @@ builder.Services.AddTemporalClient(options =>
 {
     options.TargetHost = temporalOptions.Host;
     options.Namespace = temporalOptions.Namespace;
-
+    options.Tls = new TlsOptions();
+    
     // Add tracing interceptor
     options.Interceptors = [new TracingInterceptor()];
 });
