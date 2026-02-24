@@ -2,6 +2,6 @@
 
 public class TemporalOptions
 {
-    public string Host { get; set; } = "test-cbs-temporal.alif.tj:443/grpc"; //test-cbs-temporal.alif.tj:7233
+    public string Host { get; set; } = "localhost:7233"; //test-cbs-temporal.alif.tj:7233, test-cbs-temporal.alif.tj:443/grpc
     public string Namespace { get; set; } = "default";
 }
