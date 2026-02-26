@@ -4,7 +4,7 @@ using Temporalio.Activities;
 
 namespace PaymentService.Activities;
 
-public class PaymentActivities(IPaymentService service)
+public class PaymentActivities(IPaymentService service) : IPaymentActivities
 {
     [Activity]
     public async Task<PaymentResult> PayAsync(PaymentRequest request)
@@ -14,7 +14,7 @@ public class PaymentActivities(IPaymentService service)
     }
 
     [Activity]
-    public async Task RefundPaymentAsync(Guid paymentId)
+    public async Task RefundAsync(Guid paymentId)
     {
         await service.RefundAsync(paymentId);
     }

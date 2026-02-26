@@ -8,7 +8,7 @@ public interface IPaymentActivities
     public Task<PaymentResult> PayAsync(PaymentRequest request);
 
     [Activity]
-    public Task RefundPaymentAsync(Guid paymentId);
+    public Task RefundAsync(Guid paymentId);
 }
 
 public interface IInventoryActivities

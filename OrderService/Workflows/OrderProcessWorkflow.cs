@@ -28,36 +28,37 @@ public class OrderProcessWorkflow
                     TaskQueue = TaskQueues.OrderOrchestration,
                     StartToCloseTimeout = TimeSpan.FromMinutes(1)
                 }));
-            
+
             // 1. Charge payment (Payment service)
             var paymentRequest = new PaymentRequest(order.OrderId, order.CustomerId, order.Amount, order.Currency);
-            // payment = await Workflow.ExecuteActivityAsync(
-            //     (IPaymentActivities act) => act.PayAsync(paymentRequest),
+            payment = await Workflow.ExecuteActivityAsync(
+                (IPaymentActivities act) => act.PayAsync(paymentRequest),
+                new()
+                {
+                    TaskQueue = order.ShouldCommunicateWithPhp ? TaskQueues.PaymentWithPhp : TaskQueues.Payment,
+                    StartToCloseTimeout = TimeSpan.FromMinutes(2)
+                });
+            // payment = await Workflow.ExecuteActivityAsync<PaymentResult>(
+            //     activity: "Pay",
+            //     args: [paymentRequest],
             //     new()
             //     {
             //         TaskQueue = TaskQueues.Payment,
             //         StartToCloseTimeout = TimeSpan.FromMinutes(2)
             //     });
-            payment = await Workflow.ExecuteActivityAsync<PaymentResult>(
-                activity: "Pay",
-                args: [paymentRequest],
-                new()
-                {
-                    TaskQueue = TaskQueues.Payment,
-                    StartToCloseTimeout = TimeSpan.FromMinutes(2)
-                });
 
             if (!payment.Success)
-                throw new ApplicationFailureException($"Payment failed for order {order.OrderId}: {payment.FailureReason}");
+                throw new ApplicationFailureException(
+                    $"Payment failed for order {order.OrderId}: {payment.FailureReason}");
 
             // Rolling back 2: refund payment
             compensations.Push(async () => await Workflow.ExecuteActivityAsync(
-                (IPaymentActivities act) => act.RefundPaymentAsync(payment.PaymentId),
+                (IPaymentActivities act) => act.RefundAsync(payment.PaymentId),
                 new()
                 {
-                    TaskQueue = TaskQueues.Payment,
+                    TaskQueue = order.ShouldCommunicateWithPhp ? TaskQueues.PaymentWithPhp : TaskQueues.Payment,
                     StartToCloseTimeout = TimeSpan.FromMinutes(2),
-                    // No cancellation token: we want compensation to run even if workflow is being cancelled
+                    // No cancellation token: we want compensation to run even if workflow is being canceled
                 }));
 
             // 2. Reserve inventory (Inventory service)
@@ -69,10 +70,11 @@ public class OrderProcessWorkflow
                     TaskQueue = TaskQueues.Inventory,
                     StartToCloseTimeout = TimeSpan.FromMinutes(2)
                 });
-            
+
             if (!inventory.Success)
-                throw new ApplicationFailureException($"Inventory reservation failed for order {order.OrderId}: {inventory.FailureReason}");
-            
+                throw new ApplicationFailureException(
+                    $"Inventory reservation failed for order {order.OrderId}: {inventory.FailureReason}");
+
             // Rolling back 3: restock inventory
             compensations.Push(async () => await Workflow.ExecuteActivityAsync(
                 (IInventoryActivities act) =>
@@ -82,22 +84,23 @@ public class OrderProcessWorkflow
                     TaskQueue = TaskQueues.Inventory,
                     StartToCloseTimeout = TimeSpan.FromMinutes(2)
                 }));
-            
+
             // 3. Delivery product (Delivery service)
             delivery = await Workflow.ExecuteActivityAsync(
                 (IDeliveryActivities act) => act.DeliveryAsync(
                     new DeliveryRequest(order.OrderId,
-                                        inventory.ReservationId,
-                                        order.ShippingAddress,
-                                        order.ShouldFailDelivery)),
+                        inventory.ReservationId,
+                        order.ShippingAddress,
+                        order.ShouldFailDelivery)),
                 new()
                 {
                     TaskQueue = TaskQueues.Delivery,
                     StartToCloseTimeout = TimeSpan.FromMinutes(2)
                 });
-            
+
             if (!delivery.Success)
-                throw new ApplicationFailureException($"Delivery product failed for order {order.OrderId}: {delivery.FailureReason}");
+                throw new ApplicationFailureException(
+                    $"Delivery product failed for order {order.OrderId}: {delivery.FailureReason}");
 
             // Mark order as completed (Order service)
             await Workflow.ExecuteActivityAsync(

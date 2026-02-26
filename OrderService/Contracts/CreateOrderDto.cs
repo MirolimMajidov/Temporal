@@ -7,4 +7,5 @@ public record CreateOrderDto(
     decimal Amount,
     string Currency,
     string ShippingAddress,
+    bool ShouldCommunicateWithPhp = false,
     bool ShouldFailDelivery = false);

@@ -65,6 +65,7 @@ app.MapPost("/create-order", async (CreateOrderDto dto, [FromServices] ITemporal
         Amount: dto.Amount,
         Currency: dto.Currency,
         ShippingAddress: dto.ShippingAddress,
+        ShouldCommunicateWithPhp: dto.ShouldCommunicateWithPhp,
         ShouldFailDelivery: dto.ShouldFailDelivery);
 
     var options = new WorkflowOptions(
