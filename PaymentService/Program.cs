@@ -64,21 +64,39 @@ app.MapGet("/payments/{paymentId}/approval", async (Guid paymentId, IApprovalRep
 .WithName("GetPaymentApproval")
 .WithOpenApi();
 
-app.MapPost("/payments/{paymentId}/approve", async (Guid paymentId, IPaymentService service) =>
+app.MapPost("/payments/{paymentId}/approve", async (Guid paymentId, IPaymentService service, IApprovalRepository repo, ITemporalClient client) =>
 {
     if (await service.IsPaymentApprovedAsync(paymentId))
         return Results.BadRequest("Payment is already approved");
         
     await service.ApprovePaymentAsync(paymentId);
+    
+    // Retrieve approval to get workflow details
+    var approval = await repo.GetPaymentApprovalAsync(paymentId);
+    if (approval != null && !string.IsNullOrEmpty(approval.WorkflowId))
+    {
+        await client.GetWorkflowHandle<IOrderWorkflow>(approval.WorkflowId, approval.WorkflowRunId)
+            .SignalAsync(wf => wf.ReviewPaymentAsync(PaymentApprovalStatus.Approved));
+    }
+    
     return Results.Ok($"Payment {paymentId} approved");
 })
 .WithName("ApprovePayment")
 .WithOpenApi();
 
-app.MapPost("/payments/{paymentId}/reject", async (Guid paymentId, IPaymentService service) =>
+app.MapPost("/payments/{paymentId}/reject", async (Guid paymentId, IPaymentService service, IApprovalRepository repo, ITemporalClient client) =>
 {
     // We could add a check if already rejected
     await service.RejectPaymentAsync(paymentId);
+    
+    // Retrieve approval to get workflow details
+    var approval = await repo.GetPaymentApprovalAsync(paymentId);
+    if (approval != null && !string.IsNullOrEmpty(approval.WorkflowId))
+    {
+        await client.GetWorkflowHandle<IOrderWorkflow>(approval.WorkflowId, approval.WorkflowRunId)
+             .SignalAsync(wf => wf.ReviewPaymentAsync(PaymentApprovalStatus.Rejected));
+    }
+    
     return Results.Ok($"Payment {paymentId} rejected");
 })
 .WithName("RejectPayment")

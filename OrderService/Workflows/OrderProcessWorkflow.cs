@@ -6,9 +6,17 @@ using Temporalio.Workflows;
 namespace OrderService.Workflows;
 
 [Workflow]
-public class OrderProcessWorkflow
+public class OrderProcessWorkflow : IOrderWorkflow
 {
     private readonly ILogger _logger = Workflow.Logger;
+    private PaymentApprovalStatus _approvalStatus = PaymentApprovalStatus.Pending;
+
+    [WorkflowSignal("ReviewPayment")]
+    public Task ReviewPaymentAsync(PaymentApprovalStatus status)
+    {
+        _approvalStatus = status;
+        return Task.CompletedTask;
+    }
 
     [WorkflowRun]
     public async Task<OrderStatus> RunAsync(OrderDetails order)
@@ -30,7 +38,14 @@ public class OrderProcessWorkflow
                 }));
 
             // 1. Charge payment (Payment service)
-            var paymentRequest = new PaymentRequest(order.OrderId, order.CustomerId, order.Amount, order.Currency);
+            var paymentRequest = new PaymentRequest(
+                order.OrderId,
+                order.CustomerId,
+                order.Amount,
+                order.Currency,
+                Workflow.Info.WorkflowId,
+                Workflow.Info.RunId);
+
             payment = await Workflow.ExecuteActivityAsync(
                 (IPaymentActivities act) => act.PayAsync(paymentRequest),
                 new()
@@ -38,28 +53,36 @@ public class OrderProcessWorkflow
                     TaskQueue = order.ShouldCommunicateWithPhp ? TaskQueues.PaymentWithPhp : TaskQueues.Payment,
                     StartToCloseTimeout = TimeSpan.FromMinutes(2)
                 });
-            // payment = await Workflow.ExecuteActivityAsync<PaymentResult>(
-            //     activity: "Pay",
-            //     args: [paymentRequest],
-            //     new()
-            //     {
-            //         TaskQueue = TaskQueues.Payment,
-            //         StartToCloseTimeout = TimeSpan.FromMinutes(2)
-            //     });
 
             if (!payment.Success)
                 throw new ApplicationFailureException(
                     $"Payment failed for order {order.OrderId}: {payment.FailureReason}");
 
-            // 2.1. Wait for payment approval (Payment service)
-            var paymentStatus = await Workflow.ExecuteActivityAsync(
-                (IPaymentActivities act) => act.WaitPaymentApprovalAsync(payment.PaymentId),
-                new()
-                {
-                    TaskQueue = order.ShouldCommunicateWithPhp ? TaskQueues.PaymentWithPhp : TaskQueues.Payment,
-                    StartToCloseTimeout = TimeSpan.FromMinutes(5)
-                });
-            if (!paymentStatus)
+            if (order.ShouldUseSignalToConfirmPayment)
+            {
+                // Wait for payment approval (via Signal)
+                _logger.LogInformation("Waiting for payment approval signal for order {OrderId}", order.OrderId);
+                var signalReceived = await Workflow.WaitConditionAsync(
+                    () => _approvalStatus != PaymentApprovalStatus.Pending,
+                    TimeSpan.FromMinutes(10)); // Timeout after 10 minutes
+
+                if (!signalReceived)
+                    _approvalStatus = PaymentApprovalStatus.Rejected;
+            }
+            else
+            {
+                // Wait for payment approval (Manually from payment service)
+                var paymentStatus = await Workflow.ExecuteActivityAsync(
+                    (IPaymentActivities act) => act.WaitPaymentApprovalAsync(payment.PaymentId),
+                    new()
+                    {
+                        TaskQueue = order.ShouldCommunicateWithPhp ? TaskQueues.PaymentWithPhp : TaskQueues.Payment,
+                        StartToCloseTimeout = TimeSpan.FromMinutes(5)
+                    });
+                _approvalStatus = paymentStatus ? PaymentApprovalStatus.Approved : PaymentApprovalStatus.Rejected;
+            }
+
+            if (_approvalStatus == PaymentApprovalStatus.Rejected)
                 throw new ApplicationFailureException($"Payment rejected for order {order.OrderId}");
 
             // Rolling back 2: refund payment
