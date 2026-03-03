@@ -51,6 +51,17 @@ public class OrderProcessWorkflow
                 throw new ApplicationFailureException(
                     $"Payment failed for order {order.OrderId}: {payment.FailureReason}");
 
+            // 2.1. Wait for payment approval (Payment service)
+            var paymentStatus = await Workflow.ExecuteActivityAsync(
+                (IPaymentActivities act) => act.WaitPaymentApprovalAsync(payment.PaymentId),
+                new()
+                {
+                    TaskQueue = order.ShouldCommunicateWithPhp ? TaskQueues.PaymentWithPhp : TaskQueues.Payment,
+                    StartToCloseTimeout = TimeSpan.FromMinutes(5)
+                });
+            if (!paymentStatus)
+                throw new ApplicationFailureException($"Payment rejected for order {order.OrderId}");
+
             // Rolling back 2: refund payment
             compensations.Push(async () => await Workflow.ExecuteActivityAsync(
                 (IPaymentActivities act) => act.RefundAsync(payment.PaymentId),

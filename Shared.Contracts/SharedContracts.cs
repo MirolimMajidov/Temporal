@@ -28,7 +28,9 @@ public record PaymentRequest(
     Guid OrderId,
     Guid CustomerId,
     decimal Amount,
-    string Currency);
+    string Currency,
+    string? WorkflowId = null,
+    string? WorkflowRunId = null);
 
 public record PaymentResult(
     Guid PaymentId,
@@ -55,3 +57,20 @@ public record DeliveryResult(
     Guid DeliveryId,
     bool Success,
     string? FailureReason = null);
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum PaymentApprovalStatus
+{
+    Pending,
+    Approved,
+    Rejected
+}
+
+public record PaymentApproval(
+    Guid PaymentId,
+    PaymentApprovalStatus Status,
+    DateTime CreatedAt,
+    string? WorkflowId = null,
+    string? WorkflowRunId = null,
+    DateTime? ApprovedAt = null,
+    string? ApprovedBy = null);

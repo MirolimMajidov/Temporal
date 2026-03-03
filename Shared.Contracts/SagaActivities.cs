@@ -8,6 +8,9 @@ public interface IPaymentActivities
     public Task<PaymentResult> PayAsync(PaymentRequest request);
 
     [Activity]
+    public Task<bool> WaitPaymentApprovalAsync(Guid paymentId);
+
+    [Activity]
     public Task RefundAsync(Guid paymentId);
 }
 
