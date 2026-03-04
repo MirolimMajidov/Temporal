@@ -8,4 +8,7 @@ public record CreateOrderDto(
     string Currency,
     string ShippingAddress,
     bool ShouldCommunicateWithPhp = false,
+    bool ShouldConfirmedPayment = false,
+    bool ShouldUseSignalToConfirmPayment = false,
+    bool ShouldWaitChildWorkflows = false,
     bool ShouldFailDelivery = false);

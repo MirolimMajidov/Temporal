@@ -7,6 +7,7 @@ using Shared.Contracts;
 using Temporalio.Client;
 using Temporalio.Extensions.Hosting;
 using Temporalio.Extensions.OpenTelemetry;
+using Temporalio.Worker;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
@@ -32,10 +33,15 @@ builder.Services.AddTemporalClient(options =>
     options.Interceptors = [new TracingInterceptor()];
 });
 
-// 2. Optionally run a worker in this service for order-related work
+// 2. run a worker in this service for order-related work
 builder.Services.AddHostedTemporalWorker(TaskQueues.OrderOrchestration)
     .AddScopedActivities<OrderActivities>()
     .AddWorkflow<OrderProcessWorkflow>();
+
+// 3. run a worker in this service for sms-related work
+builder.Services.AddHostedTemporalWorker(TaskQueues.Sms)
+    .AddScopedActivities<SmsActivities>()
+    .AddWorkflow<SendSmsWorkflow>();
 
 var app = builder.Build();
 
@@ -66,6 +72,9 @@ app.MapPost("/create-order", async (CreateOrderDto dto, [FromServices] ITemporal
         Currency: dto.Currency,
         ShippingAddress: dto.ShippingAddress,
         ShouldCommunicateWithPhp: dto.ShouldCommunicateWithPhp,
+        ShouldConfirmedPayment: dto.ShouldConfirmedPayment,
+        ShouldUseSignalToConfirmPayment: dto.ShouldUseSignalToConfirmPayment,
+        ShouldWaitChildWorkflows: dto.ShouldWaitChildWorkflows,
         ShouldFailDelivery: dto.ShouldFailDelivery);
 
     var options = new WorkflowOptions(

@@ -4,7 +4,7 @@ using Temporalio.Activities;
 
 namespace DeliveryService.Activities;
 
-public class DeliveryActivities(IDeliveryService service)
+public class DeliveryActivities(IDeliveryService service): IDeliveryActivities
 {
     [Activity]
     public async Task<DeliveryResult> DeliveryAsync(DeliveryRequest  request)
@@ -13,10 +13,8 @@ public class DeliveryActivities(IDeliveryService service)
         {
             return new DeliveryResult(Guid.Empty, Success: false);
         }
-        else
-        {
-            var deliveryId = await service.DeliveryAsync(request);
-            return new DeliveryResult(deliveryId, Success: true);
-        }
+
+        var deliveryId = await service.DeliveryAsync(request);
+        return new DeliveryResult(deliveryId, Success: true);
     }
 }

@@ -22,13 +22,18 @@ public record OrderDetails(
     string Currency,
     string ShippingAddress,
     bool ShouldCommunicateWithPhp = false,
+    bool ShouldConfirmedPayment = false,
+    bool ShouldUseSignalToConfirmPayment = false,
+    bool ShouldWaitChildWorkflows = false,
     bool ShouldFailDelivery = false);
 
 public record PaymentRequest(
     Guid OrderId,
     Guid CustomerId,
     decimal Amount,
-    string Currency);
+    string Currency,
+    string? WorkflowId = null,
+    string? WorkflowRunId = null);
 
 public record PaymentResult(
     Guid PaymentId,
@@ -55,3 +60,24 @@ public record DeliveryResult(
     Guid DeliveryId,
     bool Success,
     string? FailureReason = null);
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum PaymentApprovalStatus
+{
+    Pending,
+    Approved,
+    Rejected
+}
+
+public record PaymentApproval(
+    Guid PaymentId,
+    PaymentApprovalStatus Status,
+    DateTime CreatedAt,
+    string? WorkflowId = null,
+    string? WorkflowRunId = null,
+    DateTime? ApprovedAt = null,
+    string? ApprovedBy = null);
+
+public record SendSms(
+    Guid CustomerId,
+    string Message);

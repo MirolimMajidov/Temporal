@@ -7,4 +7,5 @@ public static class TaskQueues
     public const string PaymentWithPhp = "payment-tq-php";
     public const string Inventory = "inventory-tq";
     public const string Delivery = "delivery-tq";
+    public const string Sms = "sms-tq";
 }
