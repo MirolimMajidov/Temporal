@@ -66,6 +66,7 @@ app.MapPost("/create-order", async (CreateOrderDto dto, [FromServices] ITemporal
         Currency: dto.Currency,
         ShippingAddress: dto.ShippingAddress,
         ShouldCommunicateWithPhp: dto.ShouldCommunicateWithPhp,
+        ShouldConfirmedPayment: dto.ShouldConfirmedPayment,
         ShouldUseSignalToConfirmPayment: dto.ShouldUseSignalToConfirmPayment,
         ShouldFailDelivery: dto.ShouldFailDelivery);
 

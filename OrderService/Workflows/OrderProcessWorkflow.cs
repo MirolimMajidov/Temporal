@@ -58,32 +58,35 @@ public class OrderProcessWorkflow : IOrderWorkflow
                 throw new ApplicationFailureException(
                     $"Payment failed for order {order.OrderId}: {payment.FailureReason}");
 
-            if (order.ShouldUseSignalToConfirmPayment)
+            if (order.ShouldConfirmedPayment)
             {
-                // Wait for payment approval (via Signal)
-                _logger.LogInformation("Waiting for payment approval signal for order {OrderId}", order.OrderId);
-                var signalReceived = await Workflow.WaitConditionAsync(
-                    () => _approvalStatus != PaymentApprovalStatus.Pending,
-                    TimeSpan.FromMinutes(10)); // Timeout after 10 minutes
+                if (order.ShouldUseSignalToConfirmPayment)
+                {
+                    // Wait for payment approval (via Signal)
+                    _logger.LogInformation("Waiting for payment approval signal for order {OrderId}", order.OrderId);
+                    var signalReceived = await Workflow.WaitConditionAsync(
+                        () => _approvalStatus != PaymentApprovalStatus.Pending,
+                        TimeSpan.FromMinutes(10)); // Timeout after 10 minutes
 
-                if (!signalReceived)
-                    _approvalStatus = PaymentApprovalStatus.Rejected;
-            }
-            else
-            {
-                // Wait for payment approval (Manually from payment service)
-                var paymentStatus = await Workflow.ExecuteActivityAsync(
-                    (IPaymentActivities act) => act.WaitPaymentApprovalAsync(payment.PaymentId),
-                    new()
-                    {
-                        TaskQueue = order.ShouldCommunicateWithPhp ? TaskQueues.PaymentWithPhp : TaskQueues.Payment,
-                        StartToCloseTimeout = TimeSpan.FromMinutes(5)
-                    });
-                _approvalStatus = paymentStatus ? PaymentApprovalStatus.Approved : PaymentApprovalStatus.Rejected;
-            }
+                    if (!signalReceived)
+                        _approvalStatus = PaymentApprovalStatus.Rejected;
+                }
+                else
+                {
+                    // Wait for payment approval (Manually from payment service)
+                    var paymentStatus = await Workflow.ExecuteActivityAsync(
+                        (IPaymentActivities act) => act.WaitPaymentApprovalAsync(payment.PaymentId),
+                        new()
+                        {
+                            TaskQueue = order.ShouldCommunicateWithPhp ? TaskQueues.PaymentWithPhp : TaskQueues.Payment,
+                            StartToCloseTimeout = TimeSpan.FromMinutes(5)
+                        });
+                    _approvalStatus = paymentStatus ? PaymentApprovalStatus.Approved : PaymentApprovalStatus.Rejected;
+                }
 
-            if (_approvalStatus == PaymentApprovalStatus.Rejected)
-                throw new ApplicationFailureException($"Payment rejected for order {order.OrderId}");
+                if (_approvalStatus == PaymentApprovalStatus.Rejected)
+                    throw new ApplicationFailureException($"Payment rejected for order {order.OrderId}");
+            }
 
             // Rolling back 2: refund payment
             compensations.Push(async () => await Workflow.ExecuteActivityAsync(
@@ -96,7 +99,15 @@ public class OrderProcessWorkflow : IOrderWorkflow
                 }));
 
             // 2. Reserve inventory (Inventory service)
-            inventory = await Workflow.ExecuteActivityAsync(
+            // Parallel execution example: First one check if product exists, and at the same time second one reserve inventory.
+            var inventoryTask1 = Workflow.ExecuteActivityAsync(
+                (IInventoryActivities act) => act.ReservingProductExistsAsync(order.ItemId),
+                new()
+                {
+                    TaskQueue = TaskQueues.Inventory,
+                    StartToCloseTimeout = TimeSpan.FromMinutes(2)
+                });
+            var inventoryTask2 = Workflow.ExecuteActivityAsync(
                 (IInventoryActivities act) => act.ReserveInventoryAsync(
                     new InventoryReserveRequest(order.OrderId, order.ItemId, order.Quantity)),
                 new()
@@ -105,6 +116,9 @@ public class OrderProcessWorkflow : IOrderWorkflow
                     StartToCloseTimeout = TimeSpan.FromMinutes(2)
                 });
 
+            await Task.WhenAll(inventoryTask1, inventoryTask2);
+
+            inventory = inventoryTask2.Result;
             if (!inventory.Success)
                 throw new ApplicationFailureException(
                     $"Inventory reservation failed for order {order.OrderId}: {inventory.FailureReason}");

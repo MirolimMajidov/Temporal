@@ -22,6 +22,7 @@ public record OrderDetails(
     string Currency,
     string ShippingAddress,
     bool ShouldCommunicateWithPhp = false,
+    bool ShouldConfirmedPayment = false,
     bool ShouldUseSignalToConfirmPayment = false,
     bool ShouldFailDelivery = false);
 
