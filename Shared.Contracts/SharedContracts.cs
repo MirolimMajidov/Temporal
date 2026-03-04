@@ -24,6 +24,7 @@ public record OrderDetails(
     bool ShouldCommunicateWithPhp = false,
     bool ShouldConfirmedPayment = false,
     bool ShouldUseSignalToConfirmPayment = false,
+    bool ShouldWaitChildWorkflows = false,
     bool ShouldFailDelivery = false);
 
 public record PaymentRequest(
@@ -76,3 +77,7 @@ public record PaymentApproval(
     string? WorkflowRunId = null,
     DateTime? ApprovedAt = null,
     string? ApprovedBy = null);
+
+public record SendSms(
+    Guid CustomerId,
+    string Message);

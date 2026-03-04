@@ -133,6 +133,31 @@ public class OrderProcessWorkflow : IOrderWorkflow
                     StartToCloseTimeout = TimeSpan.FromMinutes(2)
                 }));
 
+            // Execute child workflow to send SMS (Communication service)
+            var smsPayload = new SendSms(
+                order.CustomerId,
+                $"Your order {order.OrderId} has been placed successfully!");
+            var childWorkflowOptions = new ChildWorkflowOptions
+            {
+                Id = $"send-sms-{order.OrderId}",
+                TaskQueue = TaskQueues.Sms,
+                TaskTimeout = TimeSpan.FromMinutes(2),
+                ParentClosePolicy = ParentClosePolicy.RequestCancel
+            };
+            if (order.ShouldWaitChildWorkflows)
+            {
+                var result = await Workflow.ExecuteChildWorkflowAsync(
+                    (SendSmsWorkflow wf) => wf.RunAsync(smsPayload),
+                    childWorkflowOptions);
+                _logger.LogInformation(result);
+            }
+            else
+            {
+                await Workflow.StartChildWorkflowAsync(
+                    (SendSmsWorkflow wf) => wf.RunAsync(smsPayload),
+                    childWorkflowOptions);
+            }
+
             // 3. Delivery product (Delivery service)
             delivery = await Workflow.ExecuteActivityAsync(
                 (IDeliveryActivities act) => act.DeliveryAsync(
