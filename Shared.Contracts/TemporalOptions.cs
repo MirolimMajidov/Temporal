@@ -2,8 +2,8 @@
 
 public class TemporalOptions
 {
-    public string Host { get; set; } = "test-cbs-temporal-grpc.alif.tj:443";
-    //public string Host { get; set; } = "localhost:7233";
+    private const bool RunInLocalMachine = false;
+    public string Host { get; set; } = RunInLocalMachine ? "localhost:7233" : "test-cbs-temporal-grpc.alif.tj:443";
     public string Namespace { get; set; } = "default";
-    public bool UseTls { get; set; } = true;
+    public bool UseTls { get; set; } = !RunInLocalMachine;
 }
