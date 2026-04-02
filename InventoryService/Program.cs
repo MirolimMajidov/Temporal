@@ -27,10 +27,6 @@ builder.Services.AddTemporalClient(options =>
 // 2. Worker reuses that client
 builder.Services
     .AddHostedTemporalWorker(taskQueue: TaskQueues.Inventory)
-    .ConfigureOptions(opts =>
-    {
-        opts.Interceptors = [new TracingInterceptor()];
-    })
     .AddScopedActivities<InventoryActivities>();
 
 var app = builder.Build();

@@ -181,7 +181,7 @@ public class OrderProcessWorkflow : IOrderWorkflow
                     act.MarkAsCompletedAsync(order.OrderId),
                 new()
                 {
-                    TaskQueue = TaskQueues.OrderOrchestration,
+                    TaskQueue = TaskQueues.Order,
                     StartToCloseTimeout = TimeSpan.FromMinutes(1)
                 });
 

@@ -33,10 +33,12 @@ builder.Services.AddTemporalClient(options =>
     options.Interceptors = [new TracingInterceptor()];
 });
 
-// 2. run a worker in this service for order-related work
+// 2.1. run a worker workflow
 builder.Services.AddHostedTemporalWorker(TaskQueues.OrderOrchestration)
-    .AddScopedActivities<OrderActivities>()
     .AddWorkflow<OrderProcessWorkflow>();
+// 2.2. run a worker in this service for order-related work
+builder.Services.AddHostedTemporalWorker(TaskQueues.Order)
+    .AddScopedActivities<OrderActivities>();
 
 // 3. run a worker in this service for sms-related work
 builder.Services.AddHostedTemporalWorker(TaskQueues.Sms)

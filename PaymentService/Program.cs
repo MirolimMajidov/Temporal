@@ -29,10 +29,6 @@ builder.Services.AddTemporalClient(options =>
 // 2. Worker reuses that client
 builder.Services
     .AddHostedTemporalWorker(taskQueue: TaskQueues.Payment)
-    .ConfigureOptions(opts =>
-    {
-        opts.Interceptors = [new TracingInterceptor()];
-    })
     .AddScopedActivities<PaymentActivities>();
 
 var app = builder.Build();
