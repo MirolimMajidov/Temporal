@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using OrderService.Activities;
 using OrderService.Contracts;
+using OrderService.Extensions;
 using OrderService.Repositories;
 using OrderService.Workflows;
 using Shared.Contracts;
@@ -18,6 +19,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
 
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+//builder.Services.RegisterTemporalWithWorkflowsAndWorkers(builder.Configuration);
 
 var temporalOptions = new TemporalOptions();
 // 1. Register Temporal client as ITemporalClient
@@ -42,8 +44,10 @@ builder.Services.AddHostedTemporalWorker(TemporalTaskQueues.OrderWorker)
 
 // 3. run a worker in this service for sms-related work
 builder.Services.AddHostedTemporalWorker(TemporalTaskQueues.Sms)
-    .AddScopedActivities<SmsActivities>()
-    .AddWorkflow<SendSmsWorkflow>();
+    .AddWorkflow<SendSmsWorkflow>()
+    .AddScopedActivities<SmsActivities>();
+// builder.Services.AddHostedTemporalWorker(TemporalTaskQueues.Sms)
+//     .AddScopedActivities<SmsActivities>();
 
 var app = builder.Build();
 
