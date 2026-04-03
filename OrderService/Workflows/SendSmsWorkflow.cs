@@ -1,4 +1,5 @@
 ﻿using OrderService.Activities;
+using OrderService.Attributes;
 using Shared.Contracts;
 using Temporalio.Exceptions;
 using Temporalio.Workflows;
@@ -6,6 +7,7 @@ using Temporalio.Workflows;
 namespace OrderService.Workflows;
 
 [Workflow]
+[TemporalTaskQueue(TemporalTaskQueues.Sms)]
 public class SendSmsWorkflow
 {
     private readonly ILogger _logger = Workflow.Logger;
@@ -19,14 +21,14 @@ public class SendSmsWorkflow
                 (SmsActivities act) => act.GetCustomerPhoneNumberAsync(smsPayload.CustomerId),
                 new ActivityOptions
                 {
-                    TaskQueue = TaskQueues.Sms,
+                    TaskQueue = TemporalTaskQueues.Sms,
                     StartToCloseTimeout = TimeSpan.FromMinutes(1)
                 });
             var result = await Workflow.ExecuteActivityAsync(
                 (SmsActivities act) => act.SendSms(customerPhoneNumber, smsPayload.Message),
                 new ActivityOptions
                 {
-                    TaskQueue = TaskQueues.Sms,
+                    TaskQueue = TemporalTaskQueues.Sms,
                     StartToCloseTimeout = TimeSpan.FromMinutes(1)
                 });
 

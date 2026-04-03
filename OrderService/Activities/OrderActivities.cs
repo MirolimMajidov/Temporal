@@ -1,8 +1,11 @@
-﻿using OrderService.Repositories;
+﻿using OrderService.Attributes;
+using OrderService.Repositories;
+using Shared.Contracts;
 using Temporalio.Activities;
 
 namespace OrderService.Activities;
 
+[TemporalTaskQueue(TemporalTaskQueues.OrderWorker)]
 public class OrderActivities(IOrderRepository repository)
 {
     [Activity]

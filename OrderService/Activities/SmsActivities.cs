@@ -1,7 +1,10 @@
-﻿using Temporalio.Activities;
+﻿using OrderService.Attributes;
+using Shared.Contracts;
+using Temporalio.Activities;
 
 namespace OrderService.Activities;
 
+[TemporalTaskQueue(TemporalTaskQueues.Sms)]
 public class SmsActivities
 {
     [Activity]

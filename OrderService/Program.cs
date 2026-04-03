@@ -34,14 +34,14 @@ builder.Services.AddTemporalClient(options =>
 });
 
 // 2.1. run a worker workflow
-builder.Services.AddHostedTemporalWorker(TaskQueues.OrderOrchestration)
+builder.Services.AddHostedTemporalWorker(TemporalTaskQueues.OrderWorkflow)
     .AddWorkflow<OrderProcessWorkflow>();
 // 2.2. run a worker in this service for order-related work
-builder.Services.AddHostedTemporalWorker(TaskQueues.Order)
+builder.Services.AddHostedTemporalWorker(TemporalTaskQueues.OrderWorker)
     .AddScopedActivities<OrderActivities>();
 
 // 3. run a worker in this service for sms-related work
-builder.Services.AddHostedTemporalWorker(TaskQueues.Sms)
+builder.Services.AddHostedTemporalWorker(TemporalTaskQueues.Sms)
     .AddScopedActivities<SmsActivities>()
     .AddWorkflow<SendSmsWorkflow>();
 
@@ -81,7 +81,7 @@ app.MapPost("/create-order", async (CreateOrderDto dto, [FromServices] ITemporal
 
     var options = new WorkflowOptions(
         id: $"order-{order.OrderId}",
-        taskQueue: TaskQueues.OrderOrchestration);
+        taskQueue: TemporalTaskQueues.OrderWorkflow);
 
     //await client.ExecuteWorkflowAsync((OrderProcessWorkflow wf) => wf.RunAsync(order), options);
     await client.StartWorkflowAsync((OrderProcessWorkflow wf) => wf.RunAsync(order), options);

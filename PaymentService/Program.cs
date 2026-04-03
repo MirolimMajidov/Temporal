@@ -28,7 +28,7 @@ builder.Services.AddTemporalClient(options =>
 
 // 2. Worker reuses that client
 builder.Services
-    .AddHostedTemporalWorker(taskQueue: TaskQueues.Payment)
+    .AddHostedTemporalWorker(taskQueue: TemporalTaskQueues.Payment)
     .AddScopedActivities<PaymentActivities>();
 
 var app = builder.Build();

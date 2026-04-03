@@ -26,7 +26,7 @@ builder.Services.AddTemporalClient(options =>
 
 // 2. Worker reuses that client
 builder.Services
-    .AddHostedTemporalWorker(taskQueue: TaskQueues.Inventory)
+    .AddHostedTemporalWorker(taskQueue: TemporalTaskQueues.Inventory)
     .AddScopedActivities<InventoryActivities>();
 
 var app = builder.Build();

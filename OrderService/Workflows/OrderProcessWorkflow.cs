@@ -1,4 +1,5 @@
 ﻿using OrderService.Activities;
+using OrderService.Attributes;
 using Shared.Contracts;
 using Temporalio.Exceptions;
 using Temporalio.Workflows;
@@ -6,6 +7,7 @@ using Temporalio.Workflows;
 namespace OrderService.Workflows;
 
 [Workflow]
+[TemporalTaskQueue(TemporalTaskQueues.OrderWorkflow)]
 public class OrderProcessWorkflow : IOrderWorkflow
 {
     private readonly ILogger _logger = Workflow.Logger;
@@ -33,7 +35,7 @@ public class OrderProcessWorkflow : IOrderWorkflow
                 (OrderActivities act) => act.MarkOrderFailedAsync(order.OrderId),
                 new()
                 {
-                    TaskQueue = TaskQueues.OrderOrchestration,
+                    TaskQueue = TemporalTaskQueues.OrderWorkflow,
                     StartToCloseTimeout = TimeSpan.FromMinutes(1)
                 }));
 
@@ -50,7 +52,7 @@ public class OrderProcessWorkflow : IOrderWorkflow
                 (IPaymentActivities act) => act.PayAsync(paymentRequest),
                 new()
                 {
-                    TaskQueue = order.ShouldCommunicateWithPhp ? TaskQueues.PaymentWithPhp : TaskQueues.Payment,
+                    TaskQueue = order.ShouldCommunicateWithPhp ? TemporalTaskQueues.PaymentWithPhp : TemporalTaskQueues.Payment,
                     StartToCloseTimeout = TimeSpan.FromMinutes(2)
                 });
 
@@ -78,7 +80,7 @@ public class OrderProcessWorkflow : IOrderWorkflow
                         (IPaymentActivities act) => act.WaitPaymentApprovalAsync(payment.PaymentId),
                         new()
                         {
-                            TaskQueue = order.ShouldCommunicateWithPhp ? TaskQueues.PaymentWithPhp : TaskQueues.Payment,
+                            TaskQueue = order.ShouldCommunicateWithPhp ? TemporalTaskQueues.PaymentWithPhp : TemporalTaskQueues.Payment,
                             StartToCloseTimeout = TimeSpan.FromMinutes(5)
                         });
                     _approvalStatus = paymentStatus ? PaymentApprovalStatus.Approved : PaymentApprovalStatus.Rejected;
@@ -93,7 +95,7 @@ public class OrderProcessWorkflow : IOrderWorkflow
                 (IPaymentActivities act) => act.RefundAsync(payment.PaymentId),
                 new()
                 {
-                    TaskQueue = order.ShouldCommunicateWithPhp ? TaskQueues.PaymentWithPhp : TaskQueues.Payment,
+                    TaskQueue = order.ShouldCommunicateWithPhp ? TemporalTaskQueues.PaymentWithPhp : TemporalTaskQueues.Payment,
                     StartToCloseTimeout = TimeSpan.FromMinutes(2),
                     // No cancellation token: we want compensation to run even if workflow is being canceled
                 }));
@@ -104,7 +106,7 @@ public class OrderProcessWorkflow : IOrderWorkflow
                 (IInventoryActivities act) => act.ReservingProductExistsAsync(order.ItemId),
                 new()
                 {
-                    TaskQueue = TaskQueues.Inventory,
+                    TaskQueue = TemporalTaskQueues.Inventory,
                     StartToCloseTimeout = TimeSpan.FromMinutes(2)
                 });
             var inventoryTask2 = Workflow.ExecuteActivityAsync(
@@ -112,7 +114,7 @@ public class OrderProcessWorkflow : IOrderWorkflow
                     new InventoryReserveRequest(order.OrderId, order.ItemId, order.Quantity)),
                 new()
                 {
-                    TaskQueue = TaskQueues.Inventory,
+                    TaskQueue = TemporalTaskQueues.Inventory,
                     StartToCloseTimeout = TimeSpan.FromMinutes(2)
                 });
 
@@ -129,7 +131,7 @@ public class OrderProcessWorkflow : IOrderWorkflow
                     act.RestockInventoryAsync(inventory!.ReservationId),
                 new()
                 {
-                    TaskQueue = TaskQueues.Inventory,
+                    TaskQueue = TemporalTaskQueues.Inventory,
                     StartToCloseTimeout = TimeSpan.FromMinutes(2)
                 }));
 
@@ -140,7 +142,7 @@ public class OrderProcessWorkflow : IOrderWorkflow
             var childWorkflowOptions = new ChildWorkflowOptions
             {
                 Id = $"send-sms-{order.OrderId}",
-                TaskQueue = TaskQueues.Sms,
+                TaskQueue = TemporalTaskQueues.Sms,
                 TaskTimeout = TimeSpan.FromMinutes(2),
                 ParentClosePolicy = ParentClosePolicy.RequestCancel
             };
@@ -167,7 +169,7 @@ public class OrderProcessWorkflow : IOrderWorkflow
                         order.ShouldFailDelivery)),
                 new()
                 {
-                    TaskQueue = TaskQueues.Delivery,
+                    TaskQueue = TemporalTaskQueues.Delivery,
                     StartToCloseTimeout = TimeSpan.FromMinutes(2)
                 });
 
@@ -181,7 +183,7 @@ public class OrderProcessWorkflow : IOrderWorkflow
                     act.MarkAsCompletedAsync(order.OrderId),
                 new()
                 {
-                    TaskQueue = TaskQueues.Order,
+                    TaskQueue = TemporalTaskQueues.OrderWorker,
                     StartToCloseTimeout = TimeSpan.FromMinutes(1)
                 });
 
