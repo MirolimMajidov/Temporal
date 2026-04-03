@@ -35,7 +35,7 @@ public class OrderProcessWorkflow : IOrderWorkflow
                 (OrderActivities act) => act.MarkOrderFailedAsync(order.OrderId),
                 new()
                 {
-                    TaskQueue = TemporalTaskQueues.OrderWorkflow,
+                    TaskQueue = TemporalTaskQueues.OrderWorker,
                     StartToCloseTimeout = TimeSpan.FromMinutes(1)
                 }));
 
