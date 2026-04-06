@@ -9,7 +9,7 @@ public class TemporalTaskQueueAttribute : Attribute
     public TemporalTaskQueueAttribute(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
-            throw new ArgumentNullException("Task queue name of Temporal must be provided.");
+            throw new Exception("Task queue name of Temporal must be provided.");
 
         Name = name;
     }
