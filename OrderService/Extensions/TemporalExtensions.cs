@@ -30,7 +30,6 @@ public static class TemporalExtensions
                 if (temporalOptions.UseTls)
                     options.Tls = new TlsOptions();
 
-                // Add tracing interceptor
                 options.Interceptors = [new TracingInterceptor()];
             });
         }

@@ -7,7 +7,7 @@ using Temporalio.Workflows;
 namespace OrderService.Workflows;
 
 [Workflow]
-[TemporalTaskQueue(TemporalTaskQueues.Sms)]
+[TemporalTaskQueue(TemporalTaskQueues.SmsWorkflow)]
 public class SendSmsWorkflow
 {
     private readonly ILogger _logger = Workflow.Logger;

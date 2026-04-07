@@ -8,7 +8,7 @@ namespace OrderService.Activities;
 [TemporalTaskQueue(TemporalTaskQueues.OrderWorker)]
 public class OrderActivities(IOrderRepository repository)
 {
-    [Activity]
+    [Activity("MarkAsCompleted2")]
     public async Task MarkAsCompletedAsync(Guid orderId)
     {
         await repository.MarkCompletedAsync(orderId);

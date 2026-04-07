@@ -19,33 +19,33 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
 
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
-//builder.Services.RegisterTemporalWithWorkflowsAndWorkers(builder.Configuration);
+builder.Services.RegisterTemporalWithWorkflowsAndWorkers(builder.Configuration);
 
-var temporalOptions = new TemporalOptions();
-// 1. Register Temporal client as ITemporalClient
-builder.Services.AddTemporalClient(options =>
-{
-    options.TargetHost = temporalOptions.Host;
-    options.Namespace = temporalOptions.Namespace;
+// var temporalOptions = new TemporalOptions();
+// // 1. Register Temporal client as ITemporalClient
+// builder.Services.AddTemporalClient(options =>
+// {
+//     options.TargetHost = temporalOptions.Host;
+//     options.Namespace = temporalOptions.Namespace;
+//
+//     if (temporalOptions.UseTls)
+//         options.Tls = new TlsOptions();
+//
+//     // Add tracing interceptor
+//     options.Interceptors = [new TracingInterceptor()];
+// });
 
-    if (temporalOptions.UseTls)
-        options.Tls = new TlsOptions();
-
-    // Add tracing interceptor
-    options.Interceptors = [new TracingInterceptor()];
-});
-
-// 2.1. run a worker workflow
-builder.Services.AddHostedTemporalWorker(TemporalTaskQueues.OrderWorkflow)
-    .AddWorkflow<OrderProcessWorkflow>();
-// 2.2. run a worker in this service for order-related work
-builder.Services.AddHostedTemporalWorker(TemporalTaskQueues.OrderWorker)
-    .AddScopedActivities<OrderActivities>();
-
-// 3. run a worker in this service for sms-related work
-builder.Services.AddHostedTemporalWorker(TemporalTaskQueues.Sms)
-    .AddWorkflow<SendSmsWorkflow>()
-    .AddScopedActivities<SmsActivities>();
+// // 2.1. run a worker workflow
+// builder.Services.AddHostedTemporalWorker(TemporalTaskQueues.OrderWorkflow)
+//     .AddWorkflow<OrderProcessWorkflow>();
+// // 2.2. run a worker in this service for order-related work
+// builder.Services.AddHostedTemporalWorker(TemporalTaskQueues.OrderWorker)
+//     .AddScopedActivities<OrderActivities>();
+//
+// // 3. run a worker in this service for sms-related work
+// builder.Services.AddHostedTemporalWorker(TemporalTaskQueues.Sms)
+//     .AddWorkflow<SendSmsWorkflow>()
+//     .AddScopedActivities<SmsActivities>();
 // builder.Services.AddHostedTemporalWorker(TemporalTaskQueues.Sms)
 //     .AddScopedActivities<SmsActivities>();
 

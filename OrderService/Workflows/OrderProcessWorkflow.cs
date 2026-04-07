@@ -142,7 +142,7 @@ public class OrderProcessWorkflow : IOrderWorkflow
             var childWorkflowOptions = new ChildWorkflowOptions
             {
                 Id = $"send-sms-{order.OrderId}",
-                TaskQueue = TemporalTaskQueues.Sms,
+                TaskQueue = TemporalTaskQueues.SmsWorkflow,
                 TaskTimeout = TimeSpan.FromMinutes(2),
                 ParentClosePolicy = ParentClosePolicy.RequestCancel
             };
