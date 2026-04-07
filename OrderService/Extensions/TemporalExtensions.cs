@@ -42,19 +42,21 @@ public static class TemporalExtensions
                 .Where(t => t is { IsClass: true, IsAbstract: false } && t.GetCustomAttribute<TemporalTaskQueueAttribute>() != null)
                 .ToArray();
 
-            foreach (var type in allTemporalClassTypes)
+            var typesByTaskQueue = allTemporalClassTypes
+                .GroupBy(t => t.GetCustomAttribute<TemporalTaskQueueAttribute>()!.Name);
+
+            foreach (var group in typesByTaskQueue)
             {
-                var temporalTaskQueueAttribute = type.GetCustomAttribute<TemporalTaskQueueAttribute>()!;
-                var workflowAttribute = type.GetCustomAttribute<WorkflowAttribute>();
-                if (workflowAttribute != null)
+                var queueName = group.Key;
+                var worker = services.AddHostedTemporalWorker(queueName);
+
+                foreach (var type in group)
                 {
-                    services.AddHostedTemporalWorker(temporalTaskQueueAttribute.Name)
-                        .AddWorkflow(type);
-                }
-                else
-                {
-                    services.AddHostedTemporalWorker(temporalTaskQueueAttribute.Name)
-                        .AddScopedActivities(type);
+                    var workflowAttribute = type.GetCustomAttribute<WorkflowAttribute>();
+                    if (workflowAttribute != null)
+                        worker.AddWorkflow(type);
+                    else
+                        worker.AddScopedActivities(type);
                 }
             }
         }

@@ -13,7 +13,7 @@ public class OrderProcessWorkflow : IOrderWorkflow
     private readonly ILogger _logger = Workflow.Logger;
     private PaymentApprovalStatus _approvalStatus = PaymentApprovalStatus.Pending;
 
-    [WorkflowSignal("WaitPaymentConfirmation")]
+    [WorkflowSignal]
     public Task WaitPaymentConfirmationAsync(PaymentApprovalStatus status)
     {
         _approvalStatus = status;
