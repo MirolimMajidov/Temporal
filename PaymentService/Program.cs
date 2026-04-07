@@ -72,7 +72,7 @@ app.MapPost("/payments/{paymentId}/approve", async (Guid paymentId, IPaymentServ
     if (approval != null && !string.IsNullOrEmpty(approval.WorkflowId))
     {
         await client.GetWorkflowHandle<IOrderWorkflow>(approval.WorkflowId, approval.WorkflowRunId)
-            .SignalAsync(wf => wf.ReviewPaymentAsync(PaymentApprovalStatus.Approved));
+            .SignalAsync(wf => wf.WaitPaymentConfirmationAsync(PaymentApprovalStatus.Approved));
     }
     
     return Results.Ok($"Payment {paymentId} approved");
@@ -90,7 +90,7 @@ app.MapPost("/payments/{paymentId}/reject", async (Guid paymentId, IPaymentServi
     if (approval != null && !string.IsNullOrEmpty(approval.WorkflowId))
     {
         await client.GetWorkflowHandle<IOrderWorkflow>(approval.WorkflowId, approval.WorkflowRunId)
-             .SignalAsync(wf => wf.ReviewPaymentAsync(PaymentApprovalStatus.Rejected));
+             .SignalAsync(wf => wf.WaitPaymentConfirmationAsync(PaymentApprovalStatus.Rejected));
     }
     
     return Results.Ok($"Payment {paymentId} rejected");

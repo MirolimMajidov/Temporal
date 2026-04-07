@@ -9,7 +9,7 @@ public interface IOrderWorkflow
     [WorkflowRun]
     Task<OrderStatus> RunAsync(OrderDetails order);
 
-    [WorkflowSignal("ReviewPayment")]
-    Task ReviewPaymentAsync(PaymentApprovalStatus status);
+    [WorkflowSignal]
+    Task WaitPaymentConfirmationAsync(PaymentApprovalStatus status);
 }
 

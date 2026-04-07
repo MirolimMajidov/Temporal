@@ -11,8 +11,8 @@ public class OrderProcessWorkflow : IOrderWorkflow
     private readonly ILogger _logger = Workflow.Logger;
     private PaymentApprovalStatus _approvalStatus = PaymentApprovalStatus.Pending;
 
-    [WorkflowSignal("ReviewPayment")]
-    public Task ReviewPaymentAsync(PaymentApprovalStatus status)
+    [WorkflowSignal]
+    public Task WaitPaymentConfirmationAsync(PaymentApprovalStatus status)
     {
         _approvalStatus = status;
         return Task.CompletedTask;
